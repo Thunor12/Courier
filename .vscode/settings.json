@@ -1,0 +1,7 @@
+{
+    "editor.formatOnSave": true,
+    "files.associations": {
+        "assert.h": "c",
+        "stdlib.h": "c"
+    }
+}
