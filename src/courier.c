@@ -104,6 +104,7 @@ static void *actor_loop(void *arg)
         fds[i].events = POLLIN;
     }
 
+    // TODO add a shutdown mechanism instead of relying on pthread_cancel
     for (;;)
     {
         int ret = poll(fds, actor->nb_msgs, -1); // block
