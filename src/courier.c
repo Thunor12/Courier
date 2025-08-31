@@ -11,6 +11,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifndef COURIER_MAX_MSG_SIZE
+#define COURIER_MAX_MSG_SIZE 256
+#endif
+
 // ----- Queue helpers -----
 static void fill_attr(struct mq_attr *attr, size_t msg_size, long maxmsg)
 {
@@ -91,11 +95,10 @@ int courier_queue_unlink(const char *queue_name) { return mq_unlink(queue_name);
 static void *actor_loop(void *arg)
 {
     CourierActor *actor = (CourierActor *)arg;
+    char buf[COURIER_MAX_MSG_SIZE];
 
     // Prepare poll fds (Linux-specific: mqd_t is a file descriptor)
-    struct pollfd *fds = calloc(actor->nb_msgs, sizeof(struct pollfd));
-    if (!fds)
-        return NULL;
+    struct pollfd fds[actor->nb_msgs];
 
     for (size_t i = 0; i < actor->nb_msgs; i++)
     {
@@ -119,15 +122,12 @@ static void *actor_loop(void *arg)
         {
             if (fds[i].revents & POLLIN)
             {
-                size_t sz = actor->msgs[i].msg_size;
-                char *buf = (char *)malloc(sz);
-                if (!buf)
-                    continue;
+                const size_t sz = actor->msgs[i].msg_size;
+
                 ssize_t r = mq_receive(actor->msgs[i].mq, buf, sz, NULL);
                 if (r < 0)
                 {
                     perror("mq_receive");
-                    free(buf);
                     continue;
                 }
                 // Optional size check
@@ -139,12 +139,10 @@ static void *actor_loop(void *arg)
                 }
                 // Dispatch
                 actor->msgs[i].handler(actor->user_data, buf);
-                free(buf);
             }
         }
     }
 
-    free(fds);
     return NULL;
 }
 
