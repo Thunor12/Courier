@@ -1,5 +1,5 @@
 #define NOB_IMPLEMENTATION
-#include "nob.h/nob.h"
+#include "nob.h"
 #include "nob_config.h"
 
 typedef struct dep
