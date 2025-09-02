@@ -121,6 +121,33 @@ static bool build_examples(void)
     return ret;
 }
 
+static void handle_clean(void)
+{
+    Nob_File_Paths files_to_clean = {0};
+    nob_read_entire_dir(BUILD_DIR, &files_to_clean);
+
+    for (size_t file_idx = 0; file_idx < files_to_clean.count; ++file_idx)
+    {
+        if (strcmp(files_to_clean.items[file_idx], ".") == 0)
+        {
+            continue;
+        }
+
+        if (strcmp(files_to_clean.items[file_idx], "..") == 0)
+        {
+            continue;
+        }
+
+        Nob_String_Builder sb = {0};
+        nob_sb_append_cstr(&sb, BUILD_DIR "/");
+        nob_sb_append_cstr(&sb, files_to_clean.items[file_idx]);
+        nob_sb_append_null(&sb);
+
+        nob_delete_file(nob_sb_to_sv(sb).data);
+        nob_sb_free(sb);
+    }
+}
+
 int main(int argc, char **argv)
 {
     NOB_GO_REBUILD_URSELF(argc, argv);
@@ -139,31 +166,7 @@ int main(int argc, char **argv)
             // Clean
             if (nob_sv_eq(sv, nob_sv_from_cstr("clean")))
             {
-                nob_log(NOB_INFO, "cleaning ...");
-                Nob_File_Paths files_to_clean = {0};
-                nob_read_entire_dir(BUILD_DIR, &files_to_clean);
-
-                for (size_t j = 0; j < files_to_clean.count; ++j)
-                {
-                    if (strcmp(files_to_clean.items[j], ".") == 0)
-                    {
-                        continue;
-                    }
-
-                    if (strcmp(files_to_clean.items[j], "..") == 0)
-                    {
-                        continue;
-                    }
-
-                    Nob_String_Builder sb = {0};
-                    nob_sb_append_cstr(&sb, BUILD_DIR "/");
-                    nob_sb_append_cstr(&sb, files_to_clean.items[j]);
-                    nob_sb_append_null(&sb);
-
-                    nob_delete_file(nob_sb_to_sv(sb).data);
-                    nob_sb_free(sb);
-                }
-
+                handle_clean();
                 return 0;
             }
 
