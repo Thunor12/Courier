@@ -871,7 +871,10 @@ NOBDEF void nob__go_rebuild_urself(int argc, char **argv, const char *source_pat
     }
 #endif
 
+    int result = 0;
     Nob_File_Paths source_paths = {0};
+    Nob_Cmd cmd = {0};
+
     nob_da_append(&source_paths, source_path);
     va_list args;
     va_start(args, source_path);
@@ -886,25 +889,27 @@ NOBDEF void nob__go_rebuild_urself(int argc, char **argv, const char *source_pat
 
     int rebuild_is_needed = nob_needs_rebuild(binary_path, source_paths.items, source_paths.count);
     if (rebuild_is_needed < 0)
-        exit(1); // error
-    if (!rebuild_is_needed)
-    { // no rebuild is needed
-        NOB_FREE(source_paths.items);
-        return;
+    {
+        nob_return_defer(1); // error
     }
 
-    Nob_Cmd cmd = {0};
+    if (!rebuild_is_needed)
+    { // no rebuild is needed
+        nob_return_defer(2);
+    }
 
     const char *old_binary_path = nob_temp_sprintf("%s.old", binary_path);
 
     if (!nob_rename(binary_path, old_binary_path))
-        exit(1);
+    {
+        nob_return_defer(1);
+    }
     nob_cmd_append(&cmd, NOB_REBUILD_URSELF(binary_path, source_path));
     Nob_Cmd_Opt opt = {0};
     if (!nob_cmd_run_opt(&cmd, opt))
     {
         nob_rename(old_binary_path, binary_path);
-        exit(1);
+        nob_return_defer(1);
     }
 #ifdef NOB_EXPERIMENTAL_DELETE_OLD
     // TODO: this is an experimental behavior behind a compilation flag.
@@ -916,8 +921,21 @@ NOBDEF void nob__go_rebuild_urself(int argc, char **argv, const char *source_pat
     nob_cmd_append(&cmd, binary_path);
     nob_da_append_many(&cmd, argv, argc);
     if (!nob_cmd_run_opt(&cmd, opt))
-        exit(1);
-    exit(0);
+    {
+        nob_return_defer(1);
+    }
+
+defer:
+
+    NOB_FREE(cmd.items);
+    NOB_FREE(source_paths.items);
+
+    if (result > 1)
+    {
+        return;
+    }
+
+    exit(result);
 }
 
 static size_t nob_temp_size = 0;
