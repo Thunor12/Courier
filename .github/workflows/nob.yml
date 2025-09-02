@@ -15,9 +15,7 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: build
-      run: git submodule update --init --recursive
-           cc -o nob nob.c
-           ./nob
+      run: git submodule update --init --recursive && cc -o nob nob.c && ./nob
       
     - name: test
       run: ./nob test
